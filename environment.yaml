@@ -20,6 +20,7 @@ dependencies:
   - loguru
   - hdbscan
   - sqlalchemy
+  - opensearch-py
   - pip:
     - unstructured[pdf]
     - just-agents
