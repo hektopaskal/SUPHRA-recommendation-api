@@ -5,6 +5,7 @@ import base64
 import io
 
 from tip_generator.paper_class import Paper
+from hybrid_search.search import find_matching_rec
 
 from loguru import logger
 
@@ -18,7 +19,12 @@ def root():
 
 @router.post("/match")
 def match(request: str):
-    return None
+    try:
+        res = find_matching_rec(request)
+    except Exception as e:
+        logger.error(f"Error processing PDF: {e}")
+        raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
+    return(res)
 
 @router.post("/recommend/url", response_model=str)
 def recommend_url(request: PDFURL):
