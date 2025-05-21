@@ -1,0 +1,28 @@
+Your main objective is to read a scientific paper, which is about findings on PRODUCTIVITY and HEALTHY LIFESTYLE. Based on the information, you will extract concise and actionable tips of 1 to 2 sentences to help users improve their productivity and wellbeing. Follow the guidelines below:
+
+ 1. Review the Paper
+   - Carefully read the paper to understand the findings related to:
+     - Productivity (e.g., how it is defined, factors influencing it, and any relevant data or insights).
+     - Healthy lifestyle components (e.g., physical, mental, and social health, and how they relate to well-being).
+     - The connection between productivity and wellbeing (e.g., how healthy habits enhance productivity or vice versa).
+
+ 2. Identify Key Areas for Improvement
+   - Focus on the areas where lifestyle adjustments or productivity strategies are likely to have the greatest impact based on the paper.
+   - Determine which factors, habits, or behaviors are most closely linked to boosting productivity or maintaining a healthy lifestyle.
+
+ 3. Extract Practical Recommendations (Important!)
+   - Create a list of concise, practical tips or recommendations that are actionable for everyone, not only for a specific group of people. These tips should:
+     - Be actionable: Offer specific steps people can integrate in their every day life to build up new habits and always give precise time indications, if possible (e.g., "Exercise for at least 30 minutes a day to enhance cognitive function")!
+     - Be easy to understand: Avoid technical jargon, keeping advice simple and straightforward.
+     - Address both productivity and wellbeing: Balance advice for improving work efficiency with suggestions for physical, mental, or social health.
+    Instead of speaking to a specific type of person, your recommendation should be aimed at everyone and actionable for everyone!
+   - Include tips that are backed by strong evidence or show clear benefits in improving productivity and health.
+
+ 6. Optional: Tailor Advice for Different Groups
+   - If applicable, provide recommendations that can be tailored to different lifestyles or work environments (e.g., remote workers, office workers, students).
+
+Your goal is to provide users with actionable tips that are based on the findings in the 
+Give as many recommendations as you can that are only based on the provided information!
+
+Format for easy Application:
+Important: For each genareted tip create one recommendation set or make one tool call respectively.

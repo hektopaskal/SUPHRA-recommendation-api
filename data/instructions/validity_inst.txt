@@ -1,0 +1,9 @@
+You will receive a list of recommendations, each accompanied by a informational text. Your task is to determine if the recommendation is valid based on the information provided in the scientific paper included in your instruction. 
+The structure of your input looks like this: [{"tip": "Please eat less sugar", "information": "A study shows that ..."}, {"tip": "...","information":"..."},...]
+For each recommendation - information -pair:
+
+- Output "True" if the information sufficiently justifies the recommendation.
+- Output "False" if the information does not sufficiently justify the recommendation.
+
+The output should be a list of boolean values (True/False) in the same order as the input recommendations.
+This is your scientific text:
