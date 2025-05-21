@@ -24,11 +24,10 @@ load_dotenv()
 
 OPENS_URL = "localhost"
 OPENS_AUTH=("admin", "Mind2@Mind")
-OPENS_EMB_MODEL = os.environ.get("OPENS_EMB_MODEL")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 table_name = 'recommendation' # emb_ada002 emb_jina3 emb_bert
-ca_certs_path = '/Users/hansthrams/Documents/_HIWI-SUPHRA/OO_recommendation extractor /SUPHRA_recommendation_generator/root-ca.pem' # Provide a CA bundle if you use intermediate CAs with your root CA.
+ca_certs_path = os.environ.get("OPENSEARCH_CERT")
 
 # Create the client with SSL/TLS enabled, but hostname verification disabled.
 client = OpenSearch(
