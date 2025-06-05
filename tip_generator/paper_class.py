@@ -1,9 +1,7 @@
 import os
-import sys
-import json
-from pathlib import Path
+import requests
 from dotenv import load_dotenv
-import shutil
+
 
 from pydantic import BaseModel
 from unstructured.partition.pdf import partition_pdf
@@ -22,8 +20,11 @@ from litellm.exceptions import APIError
 
 from tip_generator.generate import generate_recommendations
 
+from api.schemas import RecommendationSchema
+
 load_dotenv()
 
+SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
 SEMANTIC_SCHOLAR_FIELDS = [
     # 'abstract',
     # 'authors',
@@ -104,6 +105,15 @@ SEMANTIC_SCHOLAR_FIELDS = [
     'year'
 ]
 
+def fetch_metadata(doi: str):
+    url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
+    fields = ",".join(SEMANTIC_SCHOLAR_FIELDS)
+    headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
+    response = requests.get(f"{url}?fields={fields}", headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 
 class Paper(BaseModel):
     doi: str # Main identifier!
@@ -128,13 +138,39 @@ class Paper(BaseModel):
         return f"<Paper: DOI: {self.doi}, Content: {self.content[:50]}...>"
     
     @classmethod
-    def from_url(cls, url: str):
+    def build_from_url(cls, url: str) -> Optional["Paper"]:
+        """
+        Combining methods for better workflow.
+        """
+        p = cls.init_from_url(url)
+        if p is None:
+            logger.error("Failed to initialize Paper from URL.")
+            return None
+        if not p.add_meta_data():
+            logger.error("Failed to add metadata to Paper.")
+            return None
+        if p.generate_recommendations() is None:
+            logger.error("Failed to generate recommendations for Paper.")
+            return None
+        logger.info("Paper object successfully created with metadata and recommendations.")
+        return p
+
+
+    @classmethod
+    def init_from_url(cls, url: str) -> Optional["Paper"]:
         """
         Create a Paper object from a URL that points to a PDF file.
         """
         headers = {
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": (
+                "Mozilla/5.0"
+                "AppleWebKit/537.36"
+                "Chrome/123.0.0.0"
+            ),
             "Accept": "application/pdf",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
         }
         response = requests.get(url, headers=headers, stream=True)
         response.raise_for_status() # Raises an HTTPError for bad responses
@@ -153,11 +189,11 @@ class Paper(BaseModel):
         # Access the text content
         text = "\n".join([str(el) for el in elements])
         logger.info("PDF Object initialized.")
-        return cls(cls.get_doi(text), text)
+        return cls(doi=cls.get_doi(text), content=text)
 
     
     @classmethod
-    def from_base64(cls, base64_string: str):
+    def from_base64(cls, base64_string: str) -> Optional["Paper"]:
         """
         Create a Paper object from a base64-encoded PDF string.
         """
@@ -198,7 +234,9 @@ class Paper(BaseModel):
             logger.error(f"Error extracting DOI: {e}")
             return None
 
-    def add_meta_data(self) -> bool:
+    def add_meta_data(self) -> None:
+        """
+        def add_meta_data(self) -> bool:
         sch = SemanticScholar(api_key=os.getenv("SEMANTIC_SCHOLAR_API_KEY"))
         try:
             meta_data = sch.get_paper(self.doi, fields=SEMANTIC_SCHOLAR_FIELDS)
@@ -219,9 +257,30 @@ class Paper(BaseModel):
         self.citations = getattr(meta_data, "citationCount"),
         self.cit_influential = getattr(meta_data, "influentialCitationCount")
         return True
+
+        """
+        api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+        try:
+            meta_data = fetch_metadata(self.doi, api_key)
+        except Exception as e:
+            logger.error(f"Error fetching metadata for DOI {self.doi}: {e}")
+
+        self.title = meta_data.get("title")
+        self.pub_year = meta_data.get("year")
+        self.pub_type = meta_data.get("publicationTypes")
+        self.field_of_study = meta_data.get("fieldsOfStudy")
+        self.hyperlink = meta_data.get("url")
+        self.pub_venue = meta_data.get("publicationVenue", {}).get("name", "None")
+        self.citations = meta_data.get("citationCount")
+        self.cit_influential = meta_data.get("influentialCitationCount")
+
+
+
     
     def generate_recommendations(self) -> int:
-         # Generate recommendations
+        """
+        Generate recommendations based on the paper's content using a language model.
+        """
         try:
             recommendations = generate_recommendations(
                 input_text=self.content
@@ -233,6 +292,37 @@ class Paper(BaseModel):
         self.recommendations = [self.Recommendation(**rec["recommendation_set"][0]) for rec in recommendations["output"]]
         # Return number of generated recommendations, if 'None' process failed
         return len(self.recommendations)
+
+    def to_api_schemas(self) -> List[RecommendationSchema]:
+        return [
+            RecommendationSchema(
+                short_desc=r.short_desc,
+                long_desc=r.long_desc,
+                goal=r.goal,
+                activity_type=r.activity_type,
+                categories=r.categories,
+                concerns=r.concerns,
+                daytime=r.daytime,
+                weekdays=r.weekdays,
+                season=r.season,
+                is_outdoor=r.is_outdoor,
+                is_basic=r.is_basic,
+                is_advanced=r.is_advanced,
+                gender=r.gender,
+                src_title=self.title,
+                src_reference=self.reference,
+                src_pub_year=self.pub_year,
+                src_pub_type=self.pub_type,
+                src_field_of_study=self.field_of_study,
+                src_doi=self.doi,
+                src_hyperlink=self.hyperlink,
+                src_pub_venue=self.pub_venue,
+                src_citations=self.citations,
+                src_cit_influential=self.cit_influential
+            )
+            for r in self.recommendations
+        ]
+    
 
     class Recommendation(BaseModel):
         short_desc: str
@@ -258,16 +348,3 @@ class Paper(BaseModel):
             Create a Recommendation object from a dictionary.
             """
             return cls(**rec_dict)
-
-    def extract_recommendations(self):
-        """
-        Extract recommendations from the paper's content.
-        """
-
-
-    def add_recommendation(self, text, page_number=None):
-        recommendation = self.Recommendation(text, page_number)
-        self.recommendations.append(recommendation)
-
-    def list_recommendations(self):
-        return self.recommendations
