@@ -1,6 +1,7 @@
 #from hybrid_search.search import find_matching_rec
 from fastapi import APIRouter, HTTPException
 from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
+from fastapi.concurrency import run_in_threadpool
 import base64
 import io
 
@@ -26,16 +27,18 @@ def match(request: str):
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
     return(res)
 
-@router.post("/recommend/url", response_model=str)
+@router.post("/extract/url", response_model=RecommendationResponse)
 def recommend_url(request: PDFURL):
     try:
-        paper = Paper.from_url(request.url)
+        paper = Paper.build_from_url(url=request.url)
+        response = RecommendationResponse(recommendations=paper.to_api_schemas())
+        logger.info(f"Paper processed: {paper.doi}")
     except Exception as e:
         logger.error(f"Error processing PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
-    return(paper.__repr__())
+    return(response)
     
-@router.post("/recommend/base64", response_model=RecommendationResponse)
+@router.post("/extract/base64", response_model=RecommendationResponse)
 def recommend(request: PDFEncodedBase64):
     try:
         if request.file_base64 == "DEBUG_MODE" :
