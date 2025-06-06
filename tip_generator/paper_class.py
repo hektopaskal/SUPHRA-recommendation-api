@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from dotenv import load_dotenv
 
 
@@ -107,13 +108,14 @@ SEMANTIC_SCHOLAR_FIELDS = [
 
 def fetch_metadata(doi: str):
     url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
-    fields = ",".join(SEMANTIC_SCHOLAR_FIELDS)
+    fields = {"fields": ",".join(SEMANTIC_SCHOLAR_FIELDS)}
     headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
-    response = requests.get(f"{url}?fields={fields}", headers=headers)
+    response = requests.get(url, params=fields, headers=headers)
     response.raise_for_status()
+    print(response.json())
+    with open("response.json", "w") as f:
+        f.write(json.dumps(response.json(), indent=4))
     return response.json()
-
-
 
 class Paper(BaseModel):
     doi: str # Main identifier!
@@ -174,6 +176,7 @@ class Paper(BaseModel):
         }
         response = requests.get(url, headers=headers, stream=True)
         response.raise_for_status() # Raises an HTTPError for bad responses
+        logger.info(f"Response Content-Type: {response.headers.get('Content-Type')}")
         logger.info(f"PDF downloaded from {url[:50]}...")
         pdf_buffer = BytesIO() # Create a BytesIO buffer object to hold the PDF content
         for chunk in response.iter_content(chunk_size=8192): # Read in chunks (8KB)
@@ -193,7 +196,7 @@ class Paper(BaseModel):
 
     
     @classmethod
-    def from_base64(cls, base64_string: str) -> Optional["Paper"]:
+    def from_base64(cls, base64_string: str) -> "Paper":
         """
         Create a Paper object from a base64-encoded PDF string.
         """
@@ -234,49 +237,29 @@ class Paper(BaseModel):
             logger.error(f"Error extracting DOI: {e}")
             return None
 
-    def add_meta_data(self) -> None:
-        """
-        def add_meta_data(self) -> bool:
-        sch = SemanticScholar(api_key=os.getenv("SEMANTIC_SCHOLAR_API_KEY"))
+    def add_meta_data(self) -> "Paper":
         try:
-            meta_data = sch.get_paper(self.doi, fields=SEMANTIC_SCHOLAR_FIELDS)
-        except Exception as e:
-            logger.error(f"Semantic-Scholar-API-Error occured: {e} - Skipping this file!")
-            return False
-        
-        # Insert attribute values from Semantic Scholar object
-        self.title = getattr(meta_data, "title"),
-        #"src_reference"
-        self.pub_year = getattr(meta_data, "year"),
-        #"src_is_journal"
-        self.pub_type = getattr(meta_data, "publicationTypes"),
-        self.field_of_study = getattr(meta_data, "fieldsOfStudy"),
-        #"src_doi"
-        self.hyperlink = getattr(meta_data, "url"),
-        self.pub_venue = json.loads(str(getattr(meta_data, "publicationVenue")).replace("'", '"'))["name"] if not getattr(meta_data, "publicationVenue") == None else "None" ,
-        self.citations = getattr(meta_data, "citationCount"),
-        self.cit_influential = getattr(meta_data, "influentialCitationCount")
-        return True
-
-        """
-        api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
-        try:
-            meta_data = fetch_metadata(self.doi, api_key)
+            logger.info(f"Fetching metadata for DOI {self.doi}...")
+            meta_data = fetch_metadata(self.doi)
+            logger.info(f"Metadata fetched for DOI {self.doi}.")
         except Exception as e:
             logger.error(f"Error fetching metadata for DOI {self.doi}: {e}")
+            return None
+        try:
+            self.title = meta_data.get("title")
+            self.pub_year = meta_data.get("year")
+            self.pub_type = ", ".join(meta_data.get("publicationTypes"))
+            self.field_of_study = ", ".join(meta_data.get("fieldsOfStudy"))
+            self.hyperlink = meta_data.get("url")
+            self.pub_venue = meta_data.get("publicationVenue", {}).get("name", "None")
+            self.citations = meta_data.get("citationCount")
+            self.cit_influential = meta_data.get("influentialCitationCount")
+        except Exception as e:
+            logger.error(f"Error while accessing metadata for DOI {self.doi}: {e}")
+            return None
+        logger.info(f"Metadata added successfully for DOI {self.doi}.")
+        return self
 
-        self.title = meta_data.get("title")
-        self.pub_year = meta_data.get("year")
-        self.pub_type = meta_data.get("publicationTypes")
-        self.field_of_study = meta_data.get("fieldsOfStudy")
-        self.hyperlink = meta_data.get("url")
-        self.pub_venue = meta_data.get("publicationVenue", {}).get("name", "None")
-        self.citations = meta_data.get("citationCount")
-        self.cit_influential = meta_data.get("influentialCitationCount")
-
-
-
-    
     def generate_recommendations(self) -> int:
         """
         Generate recommendations based on the paper's content using a language model.
