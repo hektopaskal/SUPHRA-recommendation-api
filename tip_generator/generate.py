@@ -135,5 +135,5 @@ def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_G
     output["output"] = [json.loads(c.function.arguments)
                         for c in response.choices[0].message.tool_calls]
 
-    logger.info("Recommendation generated successfully.")
+    logger.info(f"{len(output['output'])} recommendations generated successfully.")
     return output
