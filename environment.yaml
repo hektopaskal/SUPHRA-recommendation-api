@@ -21,6 +21,7 @@ dependencies:
   - hdbscan
   - sqlalchemy
   - opensearch-py
+  - requests
   - pip:
     - unstructured[pdf]
     - just-agents
