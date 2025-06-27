@@ -31,60 +31,84 @@ tools = [
                             "properties": {
                                 "short_desc": {
                                     "type": "string",
-                                    "description": "write the concise tip that is based on the information provided in the input text; whenever it is possible give precise time indications; ensure that the tip is concrete and easy to execute for everyone who wants to improve their own productivity and wellbeing; Ensure that the recommendation is not to vague! Tip length: 50 to 200 characters!"
+                                    "description": "Write the concise tip based on the input text; precise, concrete, 50–200 characters."
                                 },
                                 "long_desc": {
                                     "type": "string",
-                                    "description": "introduce the user to the study briefly and assume that the user is not aware of the study. Therefore, use indefinite pronouns and say 'a study...' instead of 'the study...'; tell more about the study and how the scientists attained this findings; mention the scientists/authors of the input text and embed this information within a continuous text of a maximum of 500 characters; embed names and annual figures in continuous text"
+                                    "description": "Introduce the study using indefinite pronouns, max 500 characters, include names and dates in a flowing text."
                                 },
                                 "goal": {
                                     "type": "string",
-                                    "description": "assign goals that should be achieved when the recommendation is executed. the following goals are possible: augment(should be mentioned when improving on something), prevent(should be mentioned when avoiding negative impact), recover(should be mentioned when restoring personal resources), maintain(Preserving current levels of performance, well-being, or resources to ensure stability and consistency)"
+                                    "enum": ["augment", "prevent", "recover", "maintain"],
+                                    "description": "Choose the goal type for the recommendation."
                                 },
                                 "activity_type": {
                                     "type": "string",
-                                    "description": "assign your advice to an activity type that describes the key characteristic of the activity to execute the tip. the following and only the following values are possible in this field: Creative, Exercise, Cognitive, Relax, Social, Time Management, Nutrition"
+                                    "enum": ["creative", "exercise", "cognitive", "relax", "social", "time management", "nutrition"],
+                                    "description": "Select the main activity type the tip requires."
                                 },
                                 "categories": {
                                     "type": "array",
-                                    "items": {"type": "string"},
-                                    "description": "assign your advice to categories. the following and only the following values are possible in this field: work, success, productivity, performance, focus, time management, happiness, mental, active reflection, awareness, well-being, health, fitness, social"
+                                    "items": {
+                                        "type": "string",
+                                        "enum": [
+                                            "work", "success", "productivity", "performance", "focus",
+                                            "time management", "happiness", "mental", "active reflection",
+                                            "awareness", "well-being", "health", "fitness", "social"
+                                        ]
+                                    },
+                                    "description": "Assign one or more relevant categories."
                                 },
                                 "concerns": {
                                     "type": "array",
-                                    "items": {"type": "string"},
-                                    "description": "assign one or more concern for which the tip could be helpful. The following and only the following values are possible in this field: goal-setting, self-motivation, self-direction, self-discipline, focus, mindeset, time management, procrastination, stress management, mental-health, work-life balance, sleep quality"
+                                    "items": {
+                                        "type": "string",
+                                        "enum": [
+                                            "goal-setting", "self-motivation", "self-direction", "self-discipline",
+                                            "focus", "mindeset", "time management", "procrastination", "stress management",
+                                            "mental-health", "work-life balance", "sleep quality"
+                                        ]
+                                    },
+                                    "description": "Assign relevant concerns the tip addresses."
                                 },
                                 "daytime": {
                                     "type": "string",
-                                    "description": "assign a daytime that is ideal for the execution of the tip. The following times are possible: morning(tips that may influence the day ahead. e.g. mindset, motivation), noon(tips that are relevant for the second part of the day), evening(tips that are relevant when the day's work is done), end of day(tips that are relevant to finish the day, e.g. conclude about the day), any(if it doesnt matter)"
+                                    "enum": ["morning", "noon", "evening", "end of day", "any"],
+                                    "description": "Best time of day for tip execution."
                                 },
                                 "weekdays": {
                                     "type": "string",
-                                    "description": "decide for which type of days the recommendation is relevant; the following weekdays are possible: workdays, weekend, week start, end of workweek, public holiday, any(if it doesnt matter)"
+                                    "enum": ["workdays", "weekend", "week start", "end of workweek", "public holiday", "any"],
+                                    "description": "When the tip is most relevant during the week."
                                 },
                                 "season": {
                                     "type": "string",
-                                    "description": "assign one or more season types that are ideal for execution of the tip. The following seasons are possible: any, spring, summer, autumn, winter, holiday season(starting in late November and lasting until the begin of January), summer vacation"
+                                    "enum": ["any", "spring", "summer", "autumn", "winter", "holiday season", "summer vacation"],
+                                    "description": "Best seasonal context for tip execution."
                                 },
                                 "is_outdoor": {
                                     "type": "boolean",
-                                    "description": "Give 'TRUE' when tip is most probably executed outdoors or 'FALSE', if it can be executed indoors"
+                                    "description": "TRUE if tip is best done outdoors, else FALSE."
                                 },
                                 "is_basic": {
                                     "type": "boolean",
-                                    "description": "Give 'TRUE', if the tip is executable for users with low health literacy (e.g. do sports 1-2 times per week) This however will be irrelevant for more savvy users. Otherwise: 'FALSE'"
+                                    "description": "TRUE if suitable for users with low health literacy."
                                 },
                                 "is_advanced": {
                                     "type": "boolean",
-                                    "description": "Give 'TRUE', if the tip adressed to users with high health literacy (e.g. how to optimize cardio training) This however will be irrelevant for users with low health literacy. Otherwise: 'FALSE'"
+                                    "description": "TRUE if tip is for users with advanced/high health literacy."
                                 },
                                 "gender": {
                                     "type": "string",
-                                    "description": "Assign the gender for which the tip is specifically relevant. Possible values: any, male, female(e.g. regarding menstrual cycle or menopause)"
+                                    "enum": ["any", "male", "female"],
+                                    "description": "Gender relevance of the tip."
                                 }
                             },
-                            "required": ["short_desc", "long_desc", "goal", "activity_type", "categories", "concerns", "daytime", "weekdays", "seasons", "is_outdoor", "is_basic", "is_advanced", "gender"]
+                            "required": [
+                                "short_desc", "long_desc", "goal", "activity_type", "categories",
+                                "concerns", "daytime", "weekdays", "season", "is_outdoor",
+                                "is_basic", "is_advanced", "gender"
+                            ]
                         }
                     }
                 }
