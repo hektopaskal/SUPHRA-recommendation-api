@@ -20,8 +20,9 @@ from litellm import completion
 from litellm.exceptions import APIError
 
 from tip_generator.generate import generate_recommendations
+from hybrid_search.search import find_matching_rec
 
-from api.schemas import RecommendationSchema
+from api.schemas import RecommendationSchema, SimilarRecommendation
 
 load_dotenv()
 
@@ -277,34 +278,48 @@ class Paper(BaseModel):
         return len(self.recommendations)
 
     def to_api_schemas(self) -> List[RecommendationSchema]:
-        return [
-            RecommendationSchema(
-                short_desc=r.short_desc,
-                long_desc=r.long_desc,
-                goal=r.goal,
-                activity_type=r.activity_type,
-                categories=r.categories,
-                concerns=r.concerns,
-                daytime=r.daytime,
-                weekdays=r.weekdays,
-                season=r.season,
-                is_outdoor=r.is_outdoor,
-                is_basic=r.is_basic,
-                is_advanced=r.is_advanced,
-                gender=r.gender,
-                src_title=self.title,
-                src_reference=self.reference,
-                src_pub_year=self.pub_year,
-                src_pub_type=self.pub_type,
-                src_field_of_study=self.field_of_study,
-                src_doi=self.doi,
-                src_hyperlink=self.hyperlink,
-                src_pub_venue=self.pub_venue,
-                src_citations=self.citations,
-                src_cit_influential=self.cit_influential
+        api_recommendations = []
+
+        for r in self.recommendations:
+            query_text = r.short_desc + " " + r.long_desc
+            try:
+                res = find_matching_rec(query_text)
+                similar = [
+                    SimilarRecommendation(id=int(hit["id"]), score=hit["score"])
+                for hit in res
+                ]
+            except Exception as e:
+                logger.error(f"Error finding similar recommendations: {e}")
+                similar_recs = []
+            api_recommendations.append(
+                RecommendationSchema(
+                    short_desc=r.short_desc,
+                    long_desc=r.long_desc,
+                    goal=r.goal,
+                    activity_type=r.activity_type,
+                    categories=r.categories,
+                    concerns=r.concerns,
+                    daytime=r.daytime,
+                    weekdays=r.weekdays,
+                    season=r.season,
+                    is_outdoor=r.is_outdoor,
+                    is_basic=r.is_basic,
+                    is_advanced=r.is_advanced,
+                    gender=r.gender,
+                    src_title=self.title,
+                    src_reference=self.reference,
+                    src_pub_year=self.pub_year,
+                    src_pub_type=self.pub_type,
+                    src_field_of_study=self.field_of_study,
+                    src_doi=self.doi,
+                    src_hyperlink=self.hyperlink,
+                    src_pub_venue=self.pub_venue,
+                    src_citations=self.citations,
+                    src_cit_influential=self.cit_influential,
+                    similar_recommendations=similar
+                )
             )
-            for r in self.recommendations
-        ]
+        return api_recommendations
     
 
     class Recommendation(BaseModel):
