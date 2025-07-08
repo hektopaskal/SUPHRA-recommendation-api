@@ -7,6 +7,10 @@ class PDFEncodedBase64(BaseModel):
 class PDFURL(BaseModel):
     url: str
 
+class SimilarRecommendation(BaseModel):
+    id: int
+    score: float
+
 class RecommendationSchema(BaseModel):
     id: Optional[int] = None
     short_desc: Optional[str] = None
@@ -32,6 +36,7 @@ class RecommendationSchema(BaseModel):
     src_pub_venue: Optional[str] = None
     src_citations: Optional[int] = None
     src_cit_influential: Optional[int] = None
+    similar_recommendations: Optional[List[SimilarRecommendation]] = None
 
     class Config:
         from_attributes = True
