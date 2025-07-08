@@ -6,7 +6,7 @@ import base64
 import io
 
 from tip_generator.paper_class import Paper
-from hybrid_search.search import find_matching_rec
+from hybrid_search.search import find_matching_ids
 
 from loguru import logger
 
@@ -21,7 +21,7 @@ def root():
 @router.post("/match")
 def match(request: str):
     try:
-        res = find_matching_rec(request)
+        res = find_matching_ids(request)
     except Exception as e:
         logger.error(f"Error processing PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
