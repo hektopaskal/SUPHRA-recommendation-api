@@ -88,7 +88,7 @@ tools = [
                                 },
                                 "is_outdoor": {
                                     "type": "boolean",
-                                    "description": "TRUE if tip is best done outdoors, else FALSE."
+                                    "description": "TRUE,if tip is best done outdoors. FALSE, if indoors or both are suitable."
                                 },
                                 "is_basic": {
                                     "type": "boolean",
