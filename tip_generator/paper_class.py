@@ -10,9 +10,6 @@ import requests
 import base64
 from io import BytesIO
 
-from semanticscholar import SemanticScholar
-
-import typer
 from typing import Optional, List
 from loguru import logger
 
@@ -116,9 +113,6 @@ def fetch_metadata(doi: str):
         response.raise_for_status()
     except requests.exceptions as http_err:
         raise SemanticScholarError(f"Error while fetching meta data from SemanticScholar: {http_err}")
-    print(response.json())
-    with open("response.json", "w") as f:
-        f.write(json.dumps(response.json(), indent=4))
     return response.json()
 
 class Paper(BaseModel):
@@ -148,8 +142,8 @@ class Paper(BaseModel):
         """
         Combining methods for better workflow.
         """
-        p = cls.init_from_url(url).add_meta_data().generate_recommendations()
-        """if p is None:
+        p = cls.init_from_url(url)
+        if p is None:
             logger.error("Failed to initialize Paper from URL.")
             return None
         if not p.add_meta_data():
@@ -158,7 +152,7 @@ class Paper(BaseModel):
         if p.generate_recommendations() is None:
             logger.error("Failed to generate recommendations for Paper.")
             return None
-        logger.info("Paper object successfully created with metadata and recommendations.")"""
+        logger.info("Paper object successfully created with metadata and recommendations.")
         return p
 
 

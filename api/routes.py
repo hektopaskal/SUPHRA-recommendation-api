@@ -3,8 +3,6 @@ from fastapi import APIRouter, HTTPException
 from api.exceptions import PDFDownloadError, PDFParseError
 from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
 from fastapi.concurrency import run_in_threadpool
-import base64
-import io
 
 from tip_generator.paper_class import Paper
 from hybrid_search.search import find_matching_rec
