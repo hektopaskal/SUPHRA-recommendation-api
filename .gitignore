@@ -170,3 +170,5 @@ data/archive
 data/papers_pdf
 backups/
 .vscode
+
+pgvector
