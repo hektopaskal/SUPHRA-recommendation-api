@@ -5,7 +5,6 @@ from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, Recommen
 from fastapi.concurrency import run_in_threadpool
 
 from tip_generator.paper_class import Paper
-from hybrid_search.search import find_matching_rec
 
 from loguru import logger
 
@@ -20,7 +19,8 @@ def root():
 @router.post("/match")
 def match(request: str):
     try:
-        res = find_matching_rec(request)
+        #res = find_matching_rec(request)
+        res = []  # Placeholder for actual matching logic
     except Exception as e:
         logger.error(f"Error processing PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")

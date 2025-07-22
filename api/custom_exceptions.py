@@ -1,12 +1,12 @@
 class PDFDownloadError(Exception):
-    def __init__(self, message: str = "Bad request, maybe your download token is deprecated."):
+    def __init__(self, message: str = "Bad request, maybe your download token is deprecated.", status_code: int = 400):
         super().__init__(message)
-        self.status_code = 400  # Bad Request
+        self.status_code = status_code  # Bad Request
 
 class PDFFetchForbiddenError(PDFDownloadError):
-    def __init__(self, message: str = "Access to the PDF is forbidden."):
+    def __init__(self, message: str = "Access to the PDF is forbidden.", status_code: int = 403):
         super().__init__(message)
-        self.status_code = 403 # Forbidden
+        self.status_code = status_code # Forbidden
 
 class SemanticScholarError(Exception):
     def __init__(self, message: str = "Connection to SemanticScholar failed.", status_code: int = 500):
