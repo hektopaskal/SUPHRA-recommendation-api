@@ -18,7 +18,7 @@ class RecommendationSchema(BaseModel):
     daytime: Optional[str] = None
     weekdays: Optional[str] = None
     season: Optional[str] = None
-    is_outdoor: Optional[bool] = None
+    weather: Optional[str] = None
     is_basic: Optional[bool] = None
     is_advanced: Optional[bool] = None
     gender: Optional[str] = None

@@ -40,24 +40,22 @@ tools = [
                                 "goal": {
                                     "type": "string",
                                     "enum": ["augment", "prevent", "recover", "maintain"],
-                                    "description": "Choose the goal type for the recommendation."
+                                    "description": "Choose ONE the goal type for the recommendation. Do not invent new goal types."
                                 },
                                 "activity_type": {
                                     "type": "string",
                                     "enum": ["creative", "exercise", "cognitive", "relax", "social", "time management", "nutrition"],
-                                    "description": "Select the main activity type the tip requires."
+                                    "description": "Select the main activity type the tip requires. Do not invent new activity types."
                                 },
                                 "categories": {
                                     "type": "array",
                                     "items": {
                                         "type": "string",
                                         "enum": [
-                                            "work", "success", "productivity", "performance", "focus",
-                                            "time management", "happiness", "mental", "active reflection",
-                                            "awareness", "well-being", "health", "fitness", "social"
+                                            "health", "wellBeing", 'reflection', 'success', 'happiness', 'physicalActivity', 'focus', 'time', 'motivation', 'performance', 'job', 'relaxation',
                                         ]
                                     },
-                                    "description": "Assign one or more relevant categories."
+                                    "description": "Assign one or more relevant categories. DO not invent new categories. Use only the following categories: 'health', 'wellBeing', 'reflection', 'success', 'happiness', 'physicalActivity', 'focus', 'time', 'motivation', 'performance', 'job', 'relaxation'."
                                 },
                                 "concerns": {
                                     "type": "array",
@@ -65,15 +63,15 @@ tools = [
                                         "type": "string",
                                         "enum": [
                                             "goal-setting", "self-motivation", "self-direction", "self-discipline",
-                                            "focus", "mindeset", "time management", "procrastination", "stress management",
+                                            "focus", "mindset", "time management", "procrastination", "stress management",
                                             "mental-health", "work-life balance", "sleep quality"
                                         ]
                                     },
-                                    "description": "Assign relevant concerns the tip addresses."
+                                    "description": "Assign relevant concerns the tip addresses. Do not invent new concerns."
                                 },
                                 "daytime": {
                                     "type": "string",
-                                    "enum": ["morning", "noon", "evening", "end of day", "any"],
+                                    "enum": ["morning", "evening", "evening", "night", "any"],
                                     "description": "Best time of day for tip execution."
                                 },
                                 "weekdays": {
@@ -86,9 +84,10 @@ tools = [
                                     "enum": ["any", "spring", "summer", "autumn", "winter", "holiday season", "summer vacation"],
                                     "description": "Best seasonal context for tip execution."
                                 },
-                                "is_outdoor": {
-                                    "type": "boolean",
-                                    "description": "TRUE,if tip is best done outdoors. FALSE, if indoors or both are suitable."
+                                "weather": {
+                                    "type": "string",
+                                    "enum": ["indoor", "outdoor", "any"],
+                                    "description": "indoor when the tip is best executed inside, outdoor when outside, any when it does not matter."
                                 },
                                 "is_basic": {
                                     "type": "boolean",

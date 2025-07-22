@@ -148,8 +148,8 @@ class Paper(BaseModel):
         """
         Combining methods for better workflow.
         """
-        p = cls.init_from_url(url).add_meta_data().generate_recommendations()
-        """if p is None:
+        p = cls.init_from_url(url)
+        if p is None:
             logger.error("Failed to initialize Paper from URL.")
             return None
         if not p.add_meta_data():
@@ -158,7 +158,7 @@ class Paper(BaseModel):
         if p.generate_recommendations() is None:
             logger.error("Failed to generate recommendations for Paper.")
             return None
-        logger.info("Paper object successfully created with metadata and recommendations.")"""
+        logger.info("Paper object successfully created with metadata and recommendations.")
         return p
 
 
@@ -291,7 +291,7 @@ class Paper(BaseModel):
                 daytime=r.daytime,
                 weekdays=r.weekdays,
                 season=r.season,
-                is_outdoor=r.is_outdoor,
+                weather=r.weather,
                 is_basic=r.is_basic,
                 is_advanced=r.is_advanced,
                 gender=r.gender,
@@ -320,7 +320,7 @@ class Paper(BaseModel):
         daytime: str
         weekdays: str
         season: str
-        is_outdoor: bool
+        weather: str
         is_basic: bool
         is_advanced: bool
         gender: str
