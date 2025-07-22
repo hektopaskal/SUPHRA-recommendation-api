@@ -52,7 +52,7 @@ tools = [
                                     "items": {
                                         "type": "string",
                                         "enum": [
-                                            "health", "wellBeing", 'reflection', 'success', 'happiness', 'physicalActivity', 'focus', 'time', 'motivation', 'performance', 'job', 'relaxation',
+                                             "health", "wellBeing", "reflection", "success", "happiness", "physicalActivity", "focus", "time", "motivation", "performance", "job", "relaxation"
                                         ]
                                     },
                                     "description": "Assign one or more relevant categories. DO not invent new categories. Use only the following categories: 'health', 'wellBeing', 'reflection', 'success', 'happiness', 'physicalActivity', 'focus', 'time', 'motivation', 'performance', 'job', 'relaxation'."

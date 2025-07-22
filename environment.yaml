@@ -3,26 +3,17 @@ channels:
   - conda-forge
 dependencies:
   - python=3.11.10
-  - mariadb>=1.1.12 # 1.1.12 is not yet available for apple silicon via conda-forge
-  #- gcc_linux-64  # LINUX (Needed for compiling C extensions)
-  #- gxx_linux-64  # LINUX (C++ Compiler)
-  - make  # Needed for compilation
   - pathlib
   - pandas
   - litellm
   - python-dotenv
   - pip
-  - matplotlib
-  - scikit-learn
   - scipy
-  - dash
-  - plotly
   - loguru
   - hdbscan
   - sqlalchemy
-  - opensearch-py
   - requests
+  - fastapi
+  - uvicorn
   - pip:
     - unstructured[pdf]
-    - just-agents
-    - sentence-transformers

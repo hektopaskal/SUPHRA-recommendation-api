@@ -1,13 +1,10 @@
 #from hybrid_search.search import find_matching_rec
 from fastapi import APIRouter, HTTPException
-from api.exceptions import PDFDownloadError, PDFParseError
+from api.custom_exceptions import PDFDownloadError, PDFParseError, InvalidPDFError
 from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
 from fastapi.concurrency import run_in_threadpool
-import base64
-import io
 
 from tip_generator.paper_class import Paper
-from hybrid_search.search import find_matching_rec
 
 from loguru import logger
 
@@ -22,7 +19,8 @@ def root():
 @router.post("/match")
 def match(request: str):
     try:
-        res = find_matching_rec(request)
+        #res = find_matching_rec(request)
+        res = []  # Placeholder for actual matching logic
     except Exception as e:
         logger.error(f"Error processing PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
@@ -40,6 +38,9 @@ def recommend_url(request: PDFURL):
     except PDFParseError as e:
         logger.error(f"Failed to parse PDF: {e}")
         raise HTTPException(status_code=422, detail=str(e))
+    except InvalidPDFError as e:
+        logger.error(f"Invalid PDF file: {e}")
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error processing PDF: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")

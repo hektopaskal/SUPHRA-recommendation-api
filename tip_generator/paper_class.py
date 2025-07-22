@@ -10,16 +10,13 @@ import requests
 import base64
 from io import BytesIO
 
-from semanticscholar import SemanticScholar
-
-import typer
 from typing import Optional, List
 from loguru import logger
 
 from litellm import completion
 from litellm.exceptions import APIError
 
-from api.exceptions import DOIExtractionError, PDFDownloadError, PDFParseError, SemanticScholarError, OpenAIError
+from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFFetchForbiddenError, PDFParseError, SemanticScholarError, OpenAIError, InvalidPDFError
 from tip_generator.generate import generate_recommendations
 
 from api.schemas import RecommendationSchema
@@ -116,9 +113,6 @@ def fetch_metadata(doi: str):
         response.raise_for_status()
     except requests.exceptions as http_err:
         raise SemanticScholarError(f"Error while fetching meta data from SemanticScholar: {http_err}")
-    print(response.json())
-    with open("response.json", "w") as f:
-        f.write(json.dumps(response.json(), indent=4))
     return response.json()
 
 class Paper(BaseModel):
@@ -180,12 +174,18 @@ class Paper(BaseModel):
         }
         try:
             response = requests.get(url, headers=headers, stream=True)
-            response.raise_for_status() # Raises an exceptions for bad responses
-        except requests.exceptions as http_err:
-            raise PDFDownloadError(f"Failed to download PDF: {http_err}", status_code=response.status_code)
-        except requests.RequestException as req_err:
+            response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
+            content_type = response.headers.get("Content-Type", "")
+            if "pdf" not in content_type.lower():
+                raise InvalidPDFError(f"Expected a PDF, got Content-Type: {content_type}")
+        except requests.exceptions.HTTPError as http_err:
+            if http_err.response.status_code == 403:
+                raise PDFFetchForbiddenError()
+            if http_err.response.status_code == 400:
+                raise PDFDownloadError()
+            raise http_err
+        except requests.exceptions.RequestException as req_err:
             raise PDFDownloadError(f"Network error while downloading PDF: {req_err}")
-        logger.info(f"Response Content-Type: {response.headers.get('Content-Type')}")
         logger.info(f"PDF downloaded from {url[:30]}...")
         pdf_buffer = BytesIO() # Create a BytesIO buffer object to hold the PDF content
         for chunk in response.iter_content(chunk_size=8192): # Read in chunks (8KB)
