@@ -3,10 +3,15 @@ class PDFDownloadError(Exception):
         super().__init__(message)
         self.status_code = status_code  # Bad Request
 
-class PDFFetchForbiddenError(PDFDownloadError):
+class PDFFetchForbiddenError(Exception):
     def __init__(self, message: str = "Access to the PDF is forbidden.", status_code: int = 403):
         super().__init__(message)
         self.status_code = status_code # Forbidden
+
+class InvalidPDFError(Exception):
+    def __init__(self, message: str = "Invalid PDF file. There is no PDF file behind your link.", status_code: int = 422):
+        super().__init__(message)
+        self.status_code = status_code  # Unprocessable Entity
 
 class SemanticScholarError(Exception):
     def __init__(self, message: str = "Connection to SemanticScholar failed.", status_code: int = 500):

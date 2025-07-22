@@ -1,6 +1,6 @@
 #from hybrid_search.search import find_matching_rec
 from fastapi import APIRouter, HTTPException
-from api.custom_exceptions import PDFDownloadError, PDFParseError
+from api.custom_exceptions import PDFDownloadError, PDFParseError, InvalidPDFError
 from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
 from fastapi.concurrency import run_in_threadpool
 
@@ -38,9 +38,10 @@ def recommend_url(request: PDFURL):
     except PDFParseError as e:
         logger.error(f"Failed to parse PDF: {e}")
         raise HTTPException(status_code=422, detail=str(e))
+    except InvalidPDFError as e:
+        logger.error(f"Invalid PDF file: {e}")
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
-        print("EXCEPTION TYPE:", type(e))
-        print("EXCEPTION BASES:", type(e).__bases__)
         logger.error(f"Unexpected error processing PDF: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
     return(response)

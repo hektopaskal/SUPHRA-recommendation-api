@@ -16,7 +16,7 @@ from loguru import logger
 from litellm import completion
 from litellm.exceptions import APIError
 
-from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFFetchForbiddenError, PDFParseError, SemanticScholarError, OpenAIError
+from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFFetchForbiddenError, PDFParseError, SemanticScholarError, OpenAIError, InvalidPDFError
 from tip_generator.generate import generate_recommendations
 
 from api.schemas import RecommendationSchema
@@ -175,6 +175,9 @@ class Paper(BaseModel):
         try:
             response = requests.get(url, headers=headers, stream=True)
             response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
+            content_type = response.headers.get("Content-Type", "")
+            if "pdf" not in content_type.lower():
+                raise InvalidPDFError(f"Expected a PDF, got Content-Type: {content_type}")
         except requests.exceptions.HTTPError as http_err:
             if http_err.response.status_code == 403:
                 raise PDFFetchForbiddenError()
