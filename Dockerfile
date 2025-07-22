@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:latest
+FROM mambaorg/micromamba:1.4.9
 
 # Set working directory
 WORKDIR /app
@@ -12,6 +12,8 @@ RUN micromamba install -y -n base --file /tmp/environment.yaml && \
 USER root
 RUN echo 'export HOST=0.0.0.0' >> /usr/local/bin/_activate_current_env.sh
 USER $MAMBA_USER
+
+RUN apt-get update && apt-get install -y libgl1
 
 # Activate environment for following commands
 SHELL ["micromamba", "run", "-n", "base", "/bin/bash", "-c"]
