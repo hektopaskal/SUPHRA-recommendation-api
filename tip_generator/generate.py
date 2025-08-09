@@ -10,6 +10,7 @@ import json
 from loguru import logger
 
 load_dotenv()
+
 logger.remove()
 logger.add(sys.stdout, level="INFO")
 
@@ -117,7 +118,26 @@ tools = [
 ]
 
 
-def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_GENERATION_MODEL"), instruction_file: str = os.getenv("REC_GENERATION_INSTRUCTIONS")) -> dict:
+def generate_recommendations(input_text: str) -> dict:
+    
+    modelname = os.getenv("REC_GENERATION_MODEL")
+    instruction_file = os.getenv("REC_GENERATION_INSTRUCTIONS")
+
+    if not modelname:
+        raise ValueError("REC_GENERATION_MODEL is not set.")
+    if not instruction_file:
+        raise ValueError("REC_GENERATION_INSTRUCTIONS is not set.")
+
+    p = Path(instruction_file)
+    if not p.exists():
+        raise FileNotFoundError(f"Instruction file not found: {p!s}")
+
+    try:
+        with p.open(encoding='utf-8', errors='replace') as f:
+            instruction_text = f.read()
+    except Exception as e:
+        raise RuntimeError(f"Failed to read instruction file {p!s}") from e
+    
     try:
         with Path(instruction_file).absolute().resolve().open(encoding='utf-8', errors='replace') as f:
             instruction_text = f.read()
@@ -126,11 +146,12 @@ def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_G
     except PermissionError as e:
         raise PermissionError(f"Permission for instruction denied: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected error occured: {e}")
+        raise Exception(f"Unexpected error occured: {e}") from e
 
     # completion
     try:
         logger.info("Processing input text...")
+        logger.info(f"Using instruction file: {Path(instruction_file).resolve() if instruction_file else '<unset>'}")
         response = completion(
             model=modelname,
             messages=[
@@ -149,7 +170,7 @@ def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_G
     except APIError as e:
         raise APIError(f"API error: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected error: {e}")
+        raise Exception(f"Unexpected error: {e}") from e
 
     # extract completion and create output dictionary
     output = response.to_dict()
