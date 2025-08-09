@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pkl
+*.pdf
+*.log
+.env
+models/
+.notebooks/
+.idea/
+.vscode/
