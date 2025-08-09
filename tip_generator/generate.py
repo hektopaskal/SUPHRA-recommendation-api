@@ -126,7 +126,7 @@ def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_G
     except PermissionError as e:
         raise PermissionError(f"Permission for instruction denied: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected error occured: {e}")
+        raise Exception(f"Unexpected error occured: {e}") from e
 
     # completion
     try:
@@ -149,7 +149,7 @@ def generate_recommendations(input_text: str, modelname : str = os.getenv("REC_G
     except APIError as e:
         raise APIError(f"API error: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected error: {e}")
+        raise Exception(f"Unexpected error: {e}") from e
 
     # extract completion and create output dictionary
     output = response.to_dict()

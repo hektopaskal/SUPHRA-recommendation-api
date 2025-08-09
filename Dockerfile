@@ -8,12 +8,14 @@ COPY environment.yaml /tmp/environment.yaml
 RUN micromamba install -y -n base --file /tmp/environment.yaml && \
     micromamba clean --all --yes
 
-# Add HOST setting to activation script
-USER root
-RUN echo 'export HOST=0.0.0.0' >> /usr/local/bin/_activate_current_env.sh
-USER $MAMBA_USER
 
-RUN apt-get update && apt-get install -y libgl1
+USER root
+# libgl1 is required for OpenCV to work properly, needed for unstructured[PDF] parsing
+# RUN apt-get update && apt-get install -y libgl1
+# Add HOST setting to activation script
+RUN echo 'export HOST=0.0.0.0' >> /usr/local/bin/_activate_current_env.sh
+
+USER $MAMBA_USER
 
 # Activate environment for following commands
 SHELL ["micromamba", "run", "-n", "base", "/bin/bash", "-c"]
