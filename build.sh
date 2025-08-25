@@ -1,3 +1,4 @@
 #!/bin/bash
-docker build . -t suphra_recommendation_generator:local #ghcr.io/hektopaskal/suphra_recommendation_generator:local
+docker buildx build --platform linux/amd64 -t hektopaskal/recommendation_api:amd64 .
+
 
