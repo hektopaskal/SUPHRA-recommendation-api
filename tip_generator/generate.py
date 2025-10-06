@@ -87,7 +87,7 @@ tools = [
                                 },
                                 "weather": {
                                     "type": "string",
-                                    "enum": ["indoor", "outdoor", "any"],
+                                    "enum": ["indoors", "outdoors", "any"],
                                     "description": "indoor when the tip is best executed inside, outdoor when outside, any when it does not matter."
                                 },
                                 "is_basic": {
