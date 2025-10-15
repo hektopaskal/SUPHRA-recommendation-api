@@ -1,6 +1,7 @@
 import os
 import requests
-import json
+import httpx
+from fastapi.concurrency import run_in_threadpool
 from dotenv import load_dotenv
 
 
@@ -13,11 +14,11 @@ from io import BytesIO
 from typing import Optional, List
 from loguru import logger
 
-from litellm import completion
+from litellm import acompletion
 from litellm.exceptions import APIError
 
 from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFFetchForbiddenError, PDFParseError, SemanticScholarError, OpenAIError, InvalidPDFError
-from tip_generator.generate import generate_recommendations
+from tip_generator.generate import async_generate_recommendations
 
 from api.schemas import ExtractionResponse, RecommendationSchema, PaperSchema
 
@@ -104,19 +105,6 @@ SEMANTIC_SCHOLAR_FIELDS = [
     'year'
 ]
 
-def fetch_metadata(doi: str):
-    url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}"
-    fields = {"fields": ",".join(SEMANTIC_SCHOLAR_FIELDS)}
-    headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
-    try:
-        response = requests.get(
-            url, params=fields, headers=headers, allow_redirects=True, timeout=10)
-        response.raise_for_status()
-    except requests.exceptions as http_err:
-        raise SemanticScholarError(
-            f"Error while fetching meta data from SemanticScholar: {http_err}")
-    return response.json()
-
 class Paper(BaseModel):
     doi: str  # Main identifier!
     content: str  # Full text of the paper
@@ -139,18 +127,18 @@ class Paper(BaseModel):
         return f"<Paper: DOI: {self.doi}, Content: {self.content[:50]}...>"
 
     @classmethod
-    def build_from_url(cls, url: str) -> Optional["Paper"]:
+    async def async_build_from_url(cls, url: str) -> Optional["Paper"]:
         """
         Combining methods for better workflow.
         """
-        p = cls.init_from_url(url)
+        p = await cls.async_init_from_url(url)
         if p is None:
             logger.error("Failed to initialize Paper from URL.")
             return None
-        if not p.add_meta_data():
+        if not await p.async_add_meta_data():
             logger.error("Failed to add metadata to Paper.")
             return None
-        if p.generate_recommendations() is None:
+        if not await p.async_generate_recommendations():
             logger.error("Failed to generate recommendations for Paper.")
             return None
         logger.info(
@@ -158,7 +146,7 @@ class Paper(BaseModel):
         return p
 
     @classmethod
-    def init_from_url(cls, url: str) -> Optional["Paper"]:
+    async def async_init_from_url(cls, url: str) -> Optional["Paper"]:
         """
         Create a Paper object from a URL that points to a PDF file.
         """
@@ -173,38 +161,40 @@ class Paper(BaseModel):
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
         }
-        try:
-            response = requests.get(url, headers=headers, stream=True)
-            response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
-            content_type = response.headers.get("Content-Type", "")
-            if "pdf" not in content_type.lower():
-                raise InvalidPDFError(
-                    f"Expected a PDF, got Content-Type: {content_type}")
-        except requests.exceptions.HTTPError as http_err:
-            if http_err.response.status_code == 403:
-                raise PDFFetchForbiddenError()
-            if http_err.response.status_code == 400:
-                raise PDFDownloadError()
-            raise http_err
-        except requests.exceptions.RequestException as req_err:
-            raise PDFDownloadError(
-                f"Network error while downloading PDF: {req_err}")
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
+                if "pdf" not in response.headers.get("Content-Type", "").lower():
+                    raise InvalidPDFError(
+                        f"Expected a PDF, got Content-Type: {response.headers.get('Content-Type').lower()}")
+            except httpx.HTTPStatusError as http_err:
+                if http_err.response.status_code == 403:
+                    raise PDFFetchForbiddenError()
+                if http_err.response.status_code == 400:
+                    raise PDFDownloadError()
+                raise http_err
+            except httpx.RequestError as req_err:
+                raise PDFDownloadError(
+                    f"Network error while downloading PDF: {req_err}")
         logger.info(f"PDF downloaded from {url[:30]}...")
-        pdf_buffer = BytesIO()  # Create a BytesIO buffer object to hold the PDF content
+        pdf_buffer = BytesIO(response.content)  # Create a BytesIO buffer object to hold the PDF content
+        """
         # Read in chunks (8KB)
         for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 pdf_buffer.write(chunk)
         pdf_buffer.seek(0)  # Rewind the buffer to the beginning
+        """
         logger.info("Extracting text from PDF...")
         try:
-            elements = partition_pdf(file=pdf_buffer)
+            elements = await run_in_threadpool(lambda: partition_pdf(file=pdf_buffer))
         except Exception as e:
             raise PDFParseError(f"Failed to parse PDF: {e}")
         # Access the text content
         text = "\n".join([str(el) for el in elements])
         logger.info("PDF Object initialized.")
-        return cls(doi=cls.get_doi(text), content=text)
+        return cls(doi = await cls.async_get_doi(text), content=text)
 
     @classmethod
     def from_base64(cls, base64_string: str) -> "Paper":
@@ -227,12 +217,12 @@ class Paper(BaseModel):
         return cls(cls.get_doi(text), text)
 
     @staticmethod
-    def get_doi(text) -> str:
+    async def async_get_doi(text) -> str:
         """
         Extract the DOI from a scientific paper's fulltext.
         """
         try:
-            response = completion(
+            response = await acompletion(
                 model="gpt-4o-mini",
                 messages=[
                     {'role': 'system',
@@ -251,9 +241,21 @@ class Paper(BaseModel):
             logger.error(f"Error extracting DOI: {e}")
             raise DOIExtractionError(str(e)) from e
 
-    def add_meta_data(self) -> "Paper":
+    async def async_add_meta_data(self) -> "Paper":
+        if self.doi is None:
+            raise DOIExtractionError("Can't fetch metadata without DOI.")
+        url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{self.doi}"
+        fields = {"fields": ",".join(SEMANTIC_SCHOLAR_FIELDS)}
+        headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
         logger.info(f"Fetching metadata for DOI {self.doi}...")
-        meta_data = fetch_metadata(self.doi)
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as client:
+            try:
+                response = await client.get(url, params=fields, headers=headers)
+                response.raise_for_status()
+            except httpx.HTTPError as http_err:
+                raise SemanticScholarError(
+                    f"Error while fetching meta data from SemanticScholar: {http_err}")
+        meta_data = response.json()
         logger.info(f"Metadata fetched for DOI {self.doi}.")
 
         self.title = meta_data.get("title")
@@ -269,12 +271,12 @@ class Paper(BaseModel):
         logger.info(f"Metadata added successfully for DOI {self.doi}.")
         return self
 
-    def generate_recommendations(self) -> int:
+    async def async_generate_recommendations(self) -> int:
         """
         Generate recommendations based on the paper's content using a language model.
         """
         try:
-            recommendations = generate_recommendations(
+            recommendations = await async_generate_recommendations(
                 input_text=self.content
             )
         except APIError as e:
@@ -286,7 +288,7 @@ class Paper(BaseModel):
         # Return number of generated recommendations, if 'None' process failed
         return len(self.recommendations)
 
-    def to_api_schemas(self) -> ExtractionResponse:
+    async def async_to_api_schemas(self) -> ExtractionResponse:
         return ExtractionResponse(
             paper=PaperSchema(
                 title=self.title,

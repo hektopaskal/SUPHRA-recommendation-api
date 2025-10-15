@@ -13,11 +13,11 @@ from loguru import logger
 router = APIRouter()
 
 @router.get("/")
-def root():
+async def root():
     return {"message": "SUPHRA Recommendation API is running."}
 
 @router.post("/match")
-def match(request: str):
+async def match(request: str):
     try:
         #res = find_matching_rec(request)
         res = []  # Placeholder for actual matching logic
@@ -27,10 +27,10 @@ def match(request: str):
     return(res)
 
 @router.post("/extract/url", response_model=ExtractionResponse)
-def recommend_url(request: PDFURL):
+async def recommend_url(request: PDFURL):
     try:
-        paper = Paper.build_from_url(url=request.url)
-        response = paper.to_api_schemas()
+        paper = await Paper.async_build_from_url(url=request.url)
+        response = await paper.async_to_api_schemas()
         logger.info(f"Paper processed: {paper.doi}")
     except PDFDownloadError as e:
         logger.warning(f"Error processing PDF: {e}")
@@ -49,8 +49,8 @@ def recommend_url(request: PDFURL):
         raise HTTPException(status_code=500, detail="Unexpected server error")
     return(response)
     
-@router.post("/extract/base64", response_model=ExtractionResponse)
-def recommend(request: PDFEncodedBase64):
+@router.post("/dummy/extract/base64", response_model=ExtractionResponse)
+async def recommend(request: PDFEncodedBase64):
     try:
         if request.file_base64 == "DEBUG_MODE" :
             fake_recommendations = [

@@ -1,7 +1,8 @@
 import os
-from litellm import completion
+from litellm import acompletion
 from litellm.exceptions import APIError
 
+import aiofiles
 from pathlib import Path
 from dotenv import load_dotenv
 import sys
@@ -118,7 +119,7 @@ tools = [
 ]
 
 
-def generate_recommendations(input_text: str) -> dict:
+async def async_generate_recommendations(input_text: str) -> dict:
     
     modelname = os.getenv("REC_GENERATION_MODEL")
     instruction_file = os.getenv("REC_GENERATION_INSTRUCTIONS")
@@ -133,26 +134,19 @@ def generate_recommendations(input_text: str) -> dict:
         raise FileNotFoundError(f"Instruction file not found: {p!s}")
 
     try:
-        with p.open(encoding='utf-8', errors='replace') as f:
-            instruction_text = f.read()
-    except Exception as e:
-        raise RuntimeError(f"Failed to read instruction file {p!s}") from e
-    
-    try:
-        with Path(instruction_file).absolute().resolve().open(encoding='utf-8', errors='replace') as f:
-            instruction_text = f.read()
+        async with aiofiles.open(p, mode='r', encoding='utf-8', errors='replace') as f:
+            instruction_text = await f.read()
     except FileNotFoundError as e:
         raise FileNotFoundError(f"File not found: {e}")
     except PermissionError as e:
         raise PermissionError(f"Permission for instruction denied: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected error occured: {e}") from e
+        raise Exception(f"Unexpected error occured while trying to open instructions file: {e}") from e    
 
     # completion
     try:
         logger.info("Processing input text...")
-        logger.info(f"Using instruction file: {Path(instruction_file).resolve() if instruction_file else '<unset>'}")
-        response = completion(
+        response = await acompletion(
             model=modelname,
             messages=[
                 {'role': 'system', 'content': instruction_text},
