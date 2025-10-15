@@ -1,6 +1,6 @@
 #from hybrid_search.search import find_matching_rec
 from fastapi import APIRouter, HTTPException
-from api.custom_exceptions import PDFDownloadError, PDFParseError, InvalidPDFError
+from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFParseError, InvalidPDFError
 from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
 from fastapi.concurrency import run_in_threadpool
 
@@ -30,7 +30,7 @@ def match(request: str):
 def recommend_url(request: PDFURL):
     try:
         paper = Paper.build_from_url(url=request.url)
-        response = RecommendationResponse(recommendations=paper.to_api_schemas())
+        response = paper.to_api_schemas()
         logger.info(f"Paper processed: {paper.doi}")
     except PDFDownloadError as e:
         logger.warning(f"Error processing PDF: {e}")
@@ -41,6 +41,9 @@ def recommend_url(request: PDFURL):
     except InvalidPDFError as e:
         logger.error(f"Invalid PDF file: {e}")
         raise HTTPException(status_code=e.status_code, detail=str(e))
+    except DOIExtractionError as e:
+        logger.error(f"Failed to extract DOI: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error processing PDF: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")

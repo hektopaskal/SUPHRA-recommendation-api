@@ -22,19 +22,26 @@ class RecommendationSchema(BaseModel):
     is_basic: Optional[bool] = None
     is_advanced: Optional[bool] = None
     gender: Optional[str] = None
-    src_title: Optional[str] = None
-    src_reference: Optional[str] = None
-    src_pub_year: Optional[int] = None
-    src_pub_type: Optional[str] = None
-    src_field_of_study: Optional[str] = None
-    src_doi: Optional[str] = None
-    src_hyperlink: Optional[str] = None
-    src_pub_venue: Optional[str] = None
-    src_citations: Optional[int] = None
-    src_cit_influential: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class PaperSchema(BaseModel):
+    title: Optional[str] = None
+    reference: Optional[str] = None
+    pub_year: Optional[int] = None
+    pub_type: Optional[str] = None
+    field_of_study: Optional[str] = None
+    doi: Optional[str] = None
+    hyperlink: Optional[str] = None
+    pub_venue: Optional[str] = None
+    citations: Optional[int] = None
+    cit_influential: Optional[int] = None
 
     class Config:
         from_attributes = True
 
+
 class RecommendationResponse(BaseModel):
+    paper: PaperSchema
     recommendations: List[RecommendationSchema]
