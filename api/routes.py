@@ -1,7 +1,7 @@
 #from hybrid_search.search import find_matching_rec
 from fastapi import APIRouter, HTTPException
 from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFParseError, InvalidPDFError
-from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, RecommendationResponse
+from api.schemas import RecommendationSchema, PDFEncodedBase64, PDFURL, ExtractionResponse
 from fastapi.concurrency import run_in_threadpool
 
 from tip_generator.paper_class import Paper
@@ -26,7 +26,7 @@ def match(request: str):
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
     return(res)
 
-@router.post("/extract/url", response_model=RecommendationResponse)
+@router.post("/extract/url", response_model=ExtractionResponse)
 def recommend_url(request: PDFURL):
     try:
         paper = Paper.build_from_url(url=request.url)
@@ -49,7 +49,7 @@ def recommend_url(request: PDFURL):
         raise HTTPException(status_code=500, detail="Unexpected server error")
     return(response)
     
-@router.post("/extract/base64", response_model=RecommendationResponse)
+@router.post("/extract/base64", response_model=ExtractionResponse)
 def recommend(request: PDFEncodedBase64):
     try:
         if request.file_base64 == "DEBUG_MODE" :
@@ -65,12 +65,12 @@ def recommend(request: PDFEncodedBase64):
                     long_desc="Detailed description 2.",
                 ),
             ]
-            return RecommendationResponse(recommendations=fake_recommendations)
+            return ExtractionResponse(recommendations=fake_recommendations)
         else:
             # Decode the base64 PDF
             #pdf_bytes = base64.b64decode(request.file_base64)
             #pdf_file = io.BytesIO(pdf_bytes)
-            return RecommendationResponse(recommendations=[])
+            return ExtractionResponse(recommendations=[])
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")

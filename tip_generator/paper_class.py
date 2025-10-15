@@ -19,7 +19,7 @@ from litellm.exceptions import APIError
 from api.custom_exceptions import DOIExtractionError, PDFDownloadError, PDFFetchForbiddenError, PDFParseError, SemanticScholarError, OpenAIError, InvalidPDFError
 from tip_generator.generate import generate_recommendations
 
-from api.schemas import RecommendationSchema
+from api.schemas import ExtractionResponse, RecommendationSchema, PaperSchema
 
 load_dotenv()
 
@@ -109,15 +109,17 @@ def fetch_metadata(doi: str):
     fields = {"fields": ",".join(SEMANTIC_SCHOLAR_FIELDS)}
     headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
     try:
-        response = requests.get(url, params=fields, headers=headers)
+        response = requests.get(
+            url, params=fields, headers=headers, allow_redirects=True, timeout=10)
         response.raise_for_status()
     except requests.exceptions as http_err:
-        raise SemanticScholarError(f"Error while fetching meta data from SemanticScholar: {http_err}")
+        raise SemanticScholarError(
+            f"Error while fetching meta data from SemanticScholar: {http_err}")
     return response.json()
 
 class Paper(BaseModel):
-    doi: str # Main identifier!
-    content: str # Full text of the paper
+    doi: str  # Main identifier!
+    content: str  # Full text of the paper
     title: Optional[str] = None
     reference: Optional[str] = None
     pub_year: Optional[int] = None
@@ -133,10 +135,9 @@ class Paper(BaseModel):
         arbitrary_types_allowed = True
         from_attributes = True
 
-
     def __repr__(self):
         return f"<Paper: DOI: {self.doi}, Content: {self.content[:50]}...>"
-    
+
     @classmethod
     def build_from_url(cls, url: str) -> Optional["Paper"]:
         """
@@ -152,9 +153,9 @@ class Paper(BaseModel):
         if p.generate_recommendations() is None:
             logger.error("Failed to generate recommendations for Paper.")
             return None
-        logger.info("Paper object successfully created with metadata and recommendations.")
+        logger.info(
+            "Paper object successfully created with metadata and recommendations.")
         return p
-
 
     @classmethod
     def init_from_url(cls, url: str) -> Optional["Paper"]:
@@ -170,14 +171,15 @@ class Paper(BaseModel):
             "Accept": "application/pdf",
             "Accept-Language": "en-US,en;q=0.5",
             "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive", 
+            "Connection": "keep-alive",
         }
         try:
             response = requests.get(url, headers=headers, stream=True)
             response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
             content_type = response.headers.get("Content-Type", "")
             if "pdf" not in content_type.lower():
-                raise InvalidPDFError(f"Expected a PDF, got Content-Type: {content_type}")
+                raise InvalidPDFError(
+                    f"Expected a PDF, got Content-Type: {content_type}")
         except requests.exceptions.HTTPError as http_err:
             if http_err.response.status_code == 403:
                 raise PDFFetchForbiddenError()
@@ -185,10 +187,12 @@ class Paper(BaseModel):
                 raise PDFDownloadError()
             raise http_err
         except requests.exceptions.RequestException as req_err:
-            raise PDFDownloadError(f"Network error while downloading PDF: {req_err}")
+            raise PDFDownloadError(
+                f"Network error while downloading PDF: {req_err}")
         logger.info(f"PDF downloaded from {url[:30]}...")
-        pdf_buffer = BytesIO() # Create a BytesIO buffer object to hold the PDF content
-        for chunk in response.iter_content(chunk_size=8192): # Read in chunks (8KB)
+        pdf_buffer = BytesIO()  # Create a BytesIO buffer object to hold the PDF content
+        # Read in chunks (8KB)
+        for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 pdf_buffer.write(chunk)
         pdf_buffer.seek(0)  # Rewind the buffer to the beginning
@@ -202,7 +206,6 @@ class Paper(BaseModel):
         logger.info("PDF Object initialized.")
         return cls(doi=cls.get_doi(text), content=text)
 
-    
     @classmethod
     def from_base64(cls, base64_string: str) -> "Paper":
         """
@@ -233,7 +236,7 @@ class Paper(BaseModel):
                 model="gpt-4o-mini",
                 messages=[
                     {'role': 'system',
-                    'content': "You are analyzing scientific papers. Read the text and extract the DOI of the paper. Your output should either be the DOI (e.g. 10.1000/182) and nothing else or 'DOI_not_found' if the DOI is not available in the text."},
+                     'content': "You are analyzing scientific papers. Read the text and extract the DOI of the paper. Your output should either be the DOI (e.g. 10.1000/182) and nothing else or 'DOI_not_found' if the DOI is not available in the text."},
                     {'role': 'user', 'content': f'Analyze the following text and find its DOI: {text}'}
                 ],
                 temperature=0.0,
@@ -241,8 +244,10 @@ class Paper(BaseModel):
             )
             doi = response.choices[0].message.content
             logger.info(f"DOI: {doi}")
+            if doi == "DOI_not_found":
+                raise DOIExtractionError("DOI not found in the text.")
             return doi
-        except APIError as e:
+        except Exception as e:
             logger.error(f"Error extracting DOI: {e}")
             raise DOIExtractionError(str(e)) from e
 
@@ -250,16 +255,17 @@ class Paper(BaseModel):
         logger.info(f"Fetching metadata for DOI {self.doi}...")
         meta_data = fetch_metadata(self.doi)
         logger.info(f"Metadata fetched for DOI {self.doi}.")
-        
+
         self.title = meta_data.get("title")
         self.pub_year = meta_data.get("year")
         self.pub_type = ", ".join(meta_data.get("publicationTypes"))
         self.field_of_study = ", ".join(meta_data.get("fieldsOfStudy"))
         self.hyperlink = meta_data.get("url")
-        self.pub_venue = meta_data.get("publicationVenue", {}).get("name", "None")
+        self.pub_venue = meta_data.get(
+            "publicationVenue", {}).get("name", "None")
         self.citations = meta_data.get("citationCount")
         self.cit_influential = meta_data.get("influentialCitationCount")
-        
+
         logger.info(f"Metadata added successfully for DOI {self.doi}.")
         return self
 
@@ -275,40 +281,43 @@ class Paper(BaseModel):
             logger.error(f"Generate-Function: {e} - Skipping this file!\n")
             raise OpenAIError(f"Failed to generate recommendations: {e}")
         # Map recommendations from llm response to self.recommendations
-        self.recommendations = [self.Recommendation(**rec["recommendation_set"][0]) for rec in recommendations["output"]]
+        self.recommendations = [self.Recommendation(
+            **rec["recommendation_set"][0]) for rec in recommendations["output"]]
         # Return number of generated recommendations, if 'None' process failed
         return len(self.recommendations)
 
-    def to_api_schemas(self) -> List[RecommendationSchema]:
-        return [
-            RecommendationSchema(
-                short_desc=r.short_desc,
-                long_desc=r.long_desc,
-                goal=r.goal,
-                activity_type=r.activity_type,
-                categories=r.categories,
-                concerns=r.concerns,
-                daytime=r.daytime,
-                weekdays=r.weekdays,
-                season=r.season,
-                weather=r.weather,
-                is_basic=r.is_basic,
-                is_advanced=r.is_advanced,
-                gender=r.gender,
-                src_title=self.title,
-                src_reference=self.reference,
-                src_pub_year=self.pub_year,
-                src_pub_type=self.pub_type,
-                src_field_of_study=self.field_of_study,
-                src_doi=self.doi,
-                src_hyperlink=self.hyperlink,
-                src_pub_venue=self.pub_venue,
-                src_citations=self.citations,
-                src_cit_influential=self.cit_influential
-            )
-            for r in self.recommendations
-        ]
-    
+    def to_api_schemas(self) -> ExtractionResponse:
+        return ExtractionResponse(
+            paper=PaperSchema(
+                title=self.title,
+                reference=self.reference,
+                pub_year=self.pub_year,
+                pub_type=self.pub_type,
+                field_of_study=self.field_of_study,
+                doi=self.doi,
+                hyperlink=self.hyperlink,
+                pub_venue=self.pub_venue,
+                citations=self.citations,
+                cit_influential=self.cit_influential
+            ),
+            recommendations=[
+                RecommendationSchema(
+                    short_desc=r.short_desc,
+                    long_desc=r.long_desc,
+                    goal=r.goal,
+                    activity_type=r.activity_type,
+                    categories=r.categories,
+                    concerns=r.concerns,
+                    daytime=r.daytime,
+                    weekdays=r.weekdays,
+                    season=r.season,
+                    weather=r.weather,
+                    is_basic=r.is_basic,
+                    is_advanced=r.is_advanced,
+                    gender=r.gender,
+                ) for r in self.recommendations
+            ]
+        )
 
     class Recommendation(BaseModel):
         short_desc: str
@@ -327,9 +336,9 @@ class Paper(BaseModel):
 
         def __repr__(self):
             return f"<Recommendation: {self.short_desc[:50]}...>"
-        
+
         @classmethod
-        def from_dict(cls, rec_dict : dict):
+        def from_dict(cls, rec_dict: dict):
             """
             Create a Recommendation object from a dictionary.
             """

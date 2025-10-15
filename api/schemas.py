@@ -42,6 +42,6 @@ class PaperSchema(BaseModel):
         from_attributes = True
 
 
-class RecommendationResponse(BaseModel):
+class ExtractionResponse(BaseModel):
     paper: PaperSchema
     recommendations: List[RecommendationSchema]
